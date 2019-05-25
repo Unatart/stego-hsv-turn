@@ -17,6 +17,8 @@ def hide(img, encoded, msg_bits, ind, row, col):
 
 
 def embed(img, msg, angle):
+    if len(msg) == 0:
+        return img.copy()
     msg = str(len(msg)) + "/" + str(msg)
     msg_bits = "".join(str2bits_list(msg, "UTF-8"))
     encoded = img.copy()

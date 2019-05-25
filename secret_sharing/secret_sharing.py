@@ -203,6 +203,8 @@ def parse_header(share):
 
 
 def reconstruct_secret(shares, strict_mode=False):
+    if not shares:
+        raise TSSError('empty shares')
     ref_header = None
     data_shares = []
     for share in shares:

@@ -7,6 +7,7 @@ from stega.extract import extract
 from aes.aes import AESCipher
 import time
 import os
+import gzip
 
 
 def encode(img, msg, threshold, nshares, output):
@@ -21,11 +22,12 @@ def encode(img, msg, threshold, nshares, output):
     img_full = cv2.imread(img)
     height, width, channels = img_full.shape
     diff = (height * width) / (size * 8)
+    if diff >= 5:
+        diff = 5
     if diff >= 1:
         for j in range(int(diff) - 2):
             for i in range(len(shares)):
                 shares.append(shares[i])
-
         titles = slice(img, len(shares))
 
         angle = [0, 1, 2, 3]
@@ -54,9 +56,10 @@ def encode(img, msg, threshold, nshares, output):
             aes = AESCipher()
             key = aes.encrypt(str(len(shares)))
             str_key = key.decode()
-            key_path = os.path.dirname(img) + 'key'
+            key_path = os.path.dirname(img) + '/key'
             f_key = open(key_path, 'w')
             f_key.write(str_key)
+            f_key.close()
         except:
             return 'Не удалось сформировать ключ.<br>'
 
@@ -74,6 +77,7 @@ def decode(img, key_path, output):
         key = f_key.read()
         b_key = key.encode()
         nshares = int(aes.decrypt(b_key))
+        f_key.close()
     except:
         return 'Не удалось получить ключ.<br>'
 
@@ -90,12 +94,31 @@ def decode(img, key_path, output):
                 curr_angle_ind = 0
             else:
                 curr_angle_ind += 1
-            shares.append(raw.encode('latin1'))
+            if raw is None:
+                shares.append(None)
+            else:
+                shares.append(raw.encode('latin1'))
 
         result = reconstruct_secret(shares)
 
-        f = open(output, 'w')
-        f.write(result.decode())
+        msg = result.decode()
+        ext = ''
+        c = 0
+        for m in msg:
+            if m == ':':
+                break
+            else:
+                ext += m
+                c += 1
+        c += 1
+        msg = msg[c:]
+        msg = msg.encode('latin-1')
+
+        msg = gzip.decompress(msg)
+
+        f = open(output + ext, 'wb')
+        f.write(msg)
+        f.close()
 
         for i in range(len(titles)):
             os.remove(titles[i].filename)
